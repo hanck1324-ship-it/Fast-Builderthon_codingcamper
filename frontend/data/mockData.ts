@@ -1,22 +1,6 @@
-export interface Lecture {
-  id: number;
-  title: string;
-  instructor: string;
-  category: string;
-  level: 'beginner' | 'intermediate' | 'advanced';
-  students: number;
-  rating: number;
-  duration: string;
-  thumbnail: string;
-  description: string;
-  curriculum: {
-    id: number;
-    title: string;
-    duration: string;
-    completed?: boolean;
-    current?: boolean;
-  }[];
-}
+import type { Lecture, Category } from '@/types';
+
+export type { Lecture, Category };
 
 export const lectures: Lecture[] = [
   {
@@ -419,7 +403,7 @@ export const lectures: Lecture[] = [
   },
 ];
 
-export const categories = [
+export const categories: Category[] = [
   { id: 'all', name: '전체', icon: '📚' },
   { id: 'frontend', name: '프론트엔드', icon: '💻' },
   { id: 'backend', name: '백엔드', icon: '⚙️' },
