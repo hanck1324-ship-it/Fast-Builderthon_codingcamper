@@ -3,7 +3,7 @@
 import { Play, Pause, Volume2, Settings, Maximize, Waves, ArrowLeft } from 'lucide-react';
 import { useState } from 'react';
 import { motion } from 'motion/react';
-import { Lecture } from '@/data/mockData';
+import type { Lecture } from '@/types';
 
 interface LectureViewProps {
   lecture: Lecture;
