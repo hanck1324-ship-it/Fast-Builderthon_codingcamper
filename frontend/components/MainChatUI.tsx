@@ -2,7 +2,7 @@ import { useState, useRef, useEffect } from 'react';
 import { Mic, MicOff, Send, Waves, ArrowLeft } from 'lucide-react';
 import { motion } from 'framer-motion';
 import { AudioVisualizer } from './AudioVisualizer';
-import { Lecture } from '../mockData';
+import { Lecture } from '../data/mockData';
 
 interface Message {
   id: number;

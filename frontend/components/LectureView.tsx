@@ -1,7 +1,7 @@
 import { Play, Pause, Volume2, Settings, Maximize, Waves, ArrowLeft } from 'lucide-react';
 import { useState } from 'react';
 import { motion } from 'framer-motion';
-import { Lecture } from '../mockData';
+import { Lecture } from '../data/mockData';
 
 interface LectureViewProps {
   lecture: Lecture;

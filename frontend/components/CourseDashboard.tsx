@@ -1,7 +1,7 @@
 import { useState } from 'react';
 import { ArrowLeft, BookOpen, CheckCircle, Circle, Camera, FileText, BarChart3, Trophy, Waves } from 'lucide-react';
 import { motion } from 'framer-motion';
-import { Lecture } from '../mockData';
+import { Lecture } from '../data/mockData';
 import { LiveArenaEvent } from './LiveArenaEvent';
 
 interface CourseDashboardProps {

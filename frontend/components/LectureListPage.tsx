@@ -1,6 +1,6 @@
 import { ArrowLeft, Clock, Star, Users } from 'lucide-react';
 import { motion } from 'framer-motion';
-import { lectures, categories, Lecture } from '../mockData';
+import { lectures, categories, Lecture } from '../data/mockData';
 
 interface LectureListPageProps {
   category: string;
