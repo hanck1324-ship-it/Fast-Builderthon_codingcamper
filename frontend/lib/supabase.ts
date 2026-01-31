@@ -51,6 +51,7 @@ export type Database = {
           created_at?: string
           updated_at?: string
         }
+        Relationships: []
       }
       // 토론 세션
       debate_sessions: {
@@ -96,6 +97,7 @@ export type Database = {
           summary_created_at?: string | null
           summary_model?: string | null
         }
+        Relationships: []
       }
       // 토론 메시지
       debate_messages: {
@@ -123,6 +125,7 @@ export type Database = {
           audio_url?: string | null
           created_at?: string
         }
+        Relationships: []
       }
       // 토큰 트랜잭션
       token_transactions: {
@@ -150,6 +153,7 @@ export type Database = {
           reason?: 'debate_participation' | 'good_argument' | 'streak_bonus' | 'daily_bonus' | 'achievement' | 'other'
           created_at?: string
         }
+        Relationships: []
       }
       // 라이브 채팅 메시지
       live_chat_messages: {
@@ -180,6 +184,7 @@ export type Database = {
           emoji?: string | null
           created_at?: string
         }
+        Relationships: []
       }
       // 라이브 배틀 방
       live_battle_rooms: {
@@ -213,6 +218,7 @@ export type Database = {
           duration_seconds?: number | null
           ends_at?: string | null
         }
+        Relationships: []
       }
       // 토론 성장 리포트
       debate_reports: {
@@ -255,6 +261,7 @@ export type Database = {
           ocr_feedback?: string | null
           created_at?: string
         }
+        Relationships: []
       }
     }
     Views: Record<string, never>
@@ -298,6 +305,7 @@ export type Database = {
       message_sender: 'user' | 'james' | 'linda' | 'system'
       token_reason: 'debate_participation' | 'good_argument' | 'streak_bonus' | 'daily_bonus' | 'achievement' | 'other'
     }
+    CompositeTypes: Record<string, never>
   }
 }
 
