@@ -128,6 +128,28 @@ class DebateHistory(BaseModel):
     total_count: int
 
 
+# === 토론 리포트 관련 스키마 ===
+
+class DebateReportRequest(BaseModel):
+    """토론 리포트 생성 요청"""
+    session_id: str = Field(..., description="토론 세션 ID")
+    user_id: Optional[str] = Field(None, description="사용자 ID (선택)")
+    ocr_text: Optional[str] = Field(None, description="OCR 텍스트 (선택)")
+
+
+class DebateReportResponse(BaseModel):
+    """토론 리포트 응답"""
+    session_id: str
+    logic_score: int = Field(..., ge=0, le=100, description="논리력 점수 (0~100)")
+    persuasion_score: int = Field(..., ge=0, le=100, description="설득력 점수 (0~100)")
+    topic_score: int = Field(..., ge=0, le=100, description="주제 이해도 점수 (0~100)")
+    summary: str
+    improvement_tips: List[str]
+    ocr_alignment_score: Optional[int] = Field(None, ge=0, le=100)
+    ocr_feedback: Optional[str] = None
+    created_at: datetime = Field(default_factory=datetime.utcnow)
+
+
 # === 음성 관련 스키마 ===
 
 class VoiceSynthesizeRequest(BaseModel):
@@ -168,3 +190,63 @@ class HealthResponse(BaseModel):
     status: str
     version: str
     environment: str
+
+
+# === 추천 시스템 관련 스키마 ===
+
+class SuggestionType(str, Enum):
+    """추천 유형"""
+    TOPIC = "topic"
+    QUESTION = "question"
+    ARGUMENT = "argument"
+
+
+class SuggestionTarget(str, Enum):
+    """추천 대상"""
+    JAMES = "james"
+    LINDA = "linda"
+    GENERAL = "general"
+
+
+class Suggestion(BaseModel):
+    """단일 추천 항목"""
+    id: str = Field(..., description="추천 ID")
+    text: str = Field(..., description="추천 텍스트")
+    type: SuggestionType = Field(..., description="추천 유형")
+    target: Optional[SuggestionTarget] = Field(None, description="대상 토론자")
+
+
+class SuggestionContext(BaseModel):
+    """추천 생성 컨텍스트"""
+    topic: Optional[str] = Field(None, description="토론 주제")
+    user_position: Optional[Literal["pro", "con"]] = Field(None, description="사용자 입장")
+    james_last: Optional[str] = Field(None, description="제임스 마지막 발언")
+    linda_last: Optional[str] = Field(None, description="린다 마지막 발언")
+    lecture_context: Optional[str] = Field(None, description="강의 컨텍스트")
+
+
+class SuggestionGenerateRequest(BaseModel):
+    """추천 생성 요청"""
+    session_id: str = Field(..., description="세션 ID")
+    suggestion_type: SuggestionType = Field(..., description="추천 유형")
+    context: SuggestionContext = Field(default_factory=SuggestionContext)
+    
+    class Config:
+        json_schema_extra = {
+            "example": {
+                "session_id": "session_123",
+                "suggestion_type": "question",
+                "context": {
+                    "topic": "AI가 인간의 일자리를 대체해야 하는가?",
+                    "user_position": "pro",
+                    "james_last": "흥미로운 관점이지만, 반례가 있습니다.",
+                    "linda_last": "좋은 지적이에요! 😊"
+                }
+            }
+        }
+
+
+class SuggestionGenerateResponse(BaseModel):
+    """추천 생성 응답"""
+    suggestions: List[Suggestion] = Field(..., description="추천 목록")
+    generated_at: datetime = Field(default_factory=datetime.utcnow)

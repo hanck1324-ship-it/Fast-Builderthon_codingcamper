@@ -1,13 +1,23 @@
 'use client'
 
-import { Waves } from 'lucide-react';
+import Link from 'next/link';
+import { Waves, Flag } from 'lucide-react';
 import { motion } from 'framer-motion';
 
-export function ChatHeader() {
+interface ChatHeaderProps {
+  onEndDebate?: () => void;
+  isEnding?: boolean;
+}
+
+export function ChatHeader({ onEndDebate, isEnding }: ChatHeaderProps) {
   return (
     <header className="border-b border-white/10 bg-slate-950/50 backdrop-blur-xl p-6">
       <div className="flex items-center justify-between max-w-5xl mx-auto">
-        <div className="flex items-center gap-4">
+        <Link
+          href="/"
+          className="flex items-center gap-4 hover:opacity-90 transition-opacity"
+          aria-label="Go to home"
+        >
           <div className="relative">
             <Waves className="text-cyan-400" size={40} />
             <motion.div
@@ -27,7 +37,7 @@ export function ChatHeader() {
             <h1 className="text-2xl font-bold text-white">Yeoul AI 세미나</h1>
             <p className="text-sm text-cyan-400">실시간 3자 토론</p>
           </div>
-        </div>
+        </Link>
 
         <div className="flex items-center gap-4">
           <div className="flex items-center gap-3">
@@ -40,6 +50,16 @@ export function ChatHeader() {
               <span className="text-sm text-gray-400">Linda 🍀</span>
             </div>
           </div>
+          {onEndDebate && (
+            <button
+              onClick={onEndDebate}
+              disabled={isEnding}
+              className="ml-2 px-4 py-2 rounded-xl bg-white/5 border border-white/10 text-white text-sm hover:bg-white/10 transition-colors disabled:opacity-60 flex items-center gap-2"
+            >
+              <Flag size={16} className="text-cyan-400" />
+              {isEnding ? '리포트 생성 중...' : '토론 종료'}
+            </button>
+          )}
         </div>
       </div>
     </header>

@@ -51,6 +51,7 @@ export type Database = {
           created_at?: string
           updated_at?: string
         }
+        Relationships: []
       }
       // 토론 세션
       debate_sessions: {
@@ -96,6 +97,7 @@ export type Database = {
           summary_created_at?: string | null
           summary_model?: string | null
         }
+        Relationships: []
       }
       // 토론 메시지
       debate_messages: {
@@ -123,6 +125,7 @@ export type Database = {
           audio_url?: string | null
           created_at?: string
         }
+        Relationships: []
       }
       // 토큰 트랜잭션
       token_transactions: {
@@ -150,6 +153,7 @@ export type Database = {
           reason?: 'debate_participation' | 'good_argument' | 'streak_bonus' | 'daily_bonus' | 'achievement' | 'other'
           created_at?: string
         }
+        Relationships: []
       }
       // 라이브 채팅 메시지
       live_chat_messages: {
@@ -180,6 +184,7 @@ export type Database = {
           emoji?: string | null
           created_at?: string
         }
+        Relationships: []
       }
       // 라이브 배틀 방
       live_battle_rooms: {
@@ -213,6 +218,50 @@ export type Database = {
           duration_seconds?: number | null
           ends_at?: string | null
         }
+        Relationships: []
+      }
+      // 토론 성장 리포트
+      debate_reports: {
+        Row: {
+          id: string
+          session_id: string
+          user_id: string | null
+          logic_score: number | null
+          persuasion_score: number | null
+          topic_score: number | null
+          summary: string | null
+          improvement_tips: unknown | null
+          ocr_alignment_score: number | null
+          ocr_feedback: string | null
+          created_at: string
+        }
+        Insert: {
+          id?: string
+          session_id: string
+          user_id?: string | null
+          logic_score?: number | null
+          persuasion_score?: number | null
+          topic_score?: number | null
+          summary?: string | null
+          improvement_tips?: unknown | null
+          ocr_alignment_score?: number | null
+          ocr_feedback?: string | null
+          created_at?: string
+        }
+        Update: {
+          id?: string
+          session_id?: string
+          user_id?: string | null
+          logic_score?: number | null
+          persuasion_score?: number | null
+          topic_score?: number | null
+          summary?: string | null
+          improvement_tips?: unknown | null
+          ocr_alignment_score?: number | null
+          ocr_feedback?: string | null
+          created_at?: string
+        }
+        Relationships: []
       }
     }
     Views: Record<string, never>
@@ -256,6 +305,7 @@ export type Database = {
       message_sender: 'user' | 'james' | 'linda' | 'system'
       token_reason: 'debate_participation' | 'good_argument' | 'streak_bonus' | 'daily_bonus' | 'achievement' | 'other'
     }
+    CompositeTypes: Record<string, never>
   }
 }
 
@@ -283,6 +333,9 @@ export type LiveChatMessageInsert = Database['public']['Tables']['live_chat_mess
 
 export type LiveBattleRoom = Database['public']['Tables']['live_battle_rooms']['Row']
 export type LiveBattleRoomInsert = Database['public']['Tables']['live_battle_rooms']['Insert']
+
+export type DebateReport = Database['public']['Tables']['debate_reports']['Row']
+export type DebateReportInsert = Database['public']['Tables']['debate_reports']['Insert']
 
 // =============================================
 // 인증 헬퍼 함수
@@ -339,8 +392,15 @@ export async function upsertProfile(profile: ProfileInsert): Promise<Profile | n
 
 /**
  * Google 로그인
+ * @param returnUrl 로그인 후 돌아갈 URL (기본값: 현재 페이지)
  */
-export async function signInWithGoogle() {
+export async function signInWithGoogle(returnUrl?: string) {
+  // 로그인 후 돌아갈 URL을 localStorage에 저장
+  const currentUrl = returnUrl || window.location.pathname + window.location.search
+  if (typeof window !== 'undefined') {
+    localStorage.setItem('auth_return_url', currentUrl)
+  }
+  
   const { data, error } = await supabase.auth.signInWithOAuth({
     provider: 'google',
     options: {
@@ -488,7 +548,7 @@ export async function getDebateMessages(sessionId: string): Promise<DebateMessag
 // =============================================
 
 /**
- * 토큰 적립 (Edge Function 호출)
+ * 토큰 적립 (직접 DB 업데이트 - Edge Function 대체)
  */
 export async function addTokens(
   amount: number,
@@ -498,21 +558,75 @@ export async function addTokens(
   const user = await getCurrentUser()
   if (!user) return { success: false, error: '로그인이 필요합니다.' }
 
-  const { data, error } = await supabase.functions.invoke('add-tokens', {
-    body: {
-      user_id: user.id,
-      session_id: sessionId,
-      amount,
-      reason,
-    },
-  })
+  try {
+    // 1. 토큰 트랜잭션 기록 저장
+    const { error: transactionError } = await (supabase as any)
+      .from('token_transactions')
+      .insert({
+        user_id: user.id,
+        session_id: sessionId || null,
+        amount,
+        reason,
+      })
 
-  if (error) {
+    if (transactionError) {
+      console.error('트랜잭션 저장 오류:', transactionError)
+      // 트랜잭션 저장 실패해도 토큰은 적립 시도
+    }
+
+    // 2. 현재 프로필 조회
+    const { data: currentProfile, error: profileFetchError } = await supabase
+      .from('profiles')
+      .select('total_tokens')
+      .eq('id', user.id)
+      .single()
+
+    if (profileFetchError) {
+      console.error('프로필 조회 오류:', profileFetchError)
+      return { success: false, error: '프로필 조회 실패' }
+    }
+
+    const currentTokens = currentProfile?.total_tokens || 0
+    const newTotal = currentTokens + amount
+
+    // 3. 토큰 업데이트
+    const { error: updateError } = await supabase
+      .from('profiles')
+      .update({ 
+        total_tokens: newTotal,
+        updated_at: new Date().toISOString()
+      })
+      .eq('id', user.id)
+
+    if (updateError) {
+      console.error('토큰 업데이트 오류:', updateError)
+      return { success: false, error: updateError.message }
+    }
+
+    // 4. 세션 토큰도 업데이트 (있는 경우)
+    if (sessionId) {
+      const { data: sessionData } = await supabase
+        .from('debate_sessions')
+        .select('tokens_earned')
+        .eq('id', sessionId)
+        .single()
+
+      if (sessionData) {
+        await (supabase as any)
+          .from('debate_sessions')
+          .update({ 
+            tokens_earned: (sessionData.tokens_earned || 0) + amount 
+          })
+          .eq('id', sessionId)
+      }
+    }
+
+    return { success: true, total_tokens: newTotal }
+
+  } catch (error: any) {
     console.error('토큰 적립 오류:', error)
-    return { success: false, error: error.message }
+    return { success: false, error: error.message || '알 수 없는 오류' }
   }
-
-  return data
 }
 
 /**
@@ -663,19 +777,36 @@ export async function getLiveBattleRooms(limit = 12): Promise<LiveBattleRoom[]> 
 
 export async function createLiveBattleRoom(
   title: string,
+  customRoomId?: string,
   durationSeconds = 3000
 ): Promise<LiveBattleRoom | null> {
   const user = await getCurrentUser()
   if (!user) return null
 
+  // 커스텀 roomId가 있으면 기존 방이 있는지 확인
+  if (customRoomId) {
+    const existing = await getLiveBattleRoom(customRoomId)
+    if (existing && existing.status === 'live') {
+      return existing // 이미 존재하는 라이브 방 반환
+    }
+  }
+
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  const insertData: any = {
+    title,
+    created_by: user.id,
+    status: 'live',
+    duration_seconds: durationSeconds,
+  }
+
+  // 커스텀 roomId가 있으면 id 지정
+  if (customRoomId) {
+    insertData.id = customRoomId
+  }
+
   const { data, error } = await supabase
     .from('live_battle_rooms')
-    .insert({
-      title,
-      created_by: user.id,
-      status: 'live',
-      duration_seconds: durationSeconds,
-    })
+    .insert(insertData)
     .select()
     .single()
 
@@ -714,6 +845,26 @@ export async function endLiveBattleRoom(roomId: string): Promise<boolean> {
     return false
   }
   return true
+}
+
+// =============================================
+// 토론 리포트 헬퍼 함수
+// =============================================
+
+export async function getLatestDebateReport(sessionId: string): Promise<DebateReport | null> {
+  const { data, error } = await supabase
+    .from('debate_reports')
+    .select('*')
+    .eq('session_id', sessionId)
+    .order('created_at', { ascending: false })
+    .limit(1)
+    .single()
+
+  if (error) {
+    console.error('토론 리포트 조회 오류:', error)
+    return null
+  }
+  return data
 }
 
 export async function getLiveRoomParticipants(roomIds: string[], sinceMinutes = 10): Promise<Record<string, number>> {
