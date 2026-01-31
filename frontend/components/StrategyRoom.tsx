@@ -3,27 +3,17 @@
 import { useState, useEffect } from 'react';
 import { motion } from 'framer-motion';
 import { Lock, Video, MessageSquare, Sparkles, ArrowRight } from 'lucide-react';
+import { useTimer } from '@/hooks/useTimer';
 
 interface StrategyRoomProps {
   onComplete: () => void;
 }
 
 export function StrategyRoom({ onComplete }: StrategyRoomProps) {
-  const [countdown, setCountdown] = useState(180); // 3 minutes
+  const { formattedTime } = useTimer({ initialSeconds: 180 });
   const [strategies, setStrategies] = useState<string[]>([]);
 
   useEffect(() => {
-    const timer = setInterval(() => {
-      setCountdown(prev => {
-        if (prev <= 1) {
-          clearInterval(timer);
-          return 0;
-        }
-        return prev - 1;
-      });
-    }, 1000);
-
-    // Simulate AI strategy suggestions
     const strategyTimer = setTimeout(() => {
       setStrategies([
         '주장을 먼저 명확하게 제시하세요',
@@ -32,17 +22,8 @@ export function StrategyRoom({ onComplete }: StrategyRoomProps) {
       ]);
     }, 2000);
 
-    return () => {
-      clearInterval(timer);
-      clearTimeout(strategyTimer);
-    };
+    return () => clearTimeout(strategyTimer);
   }, []);
-
-  const formatTime = (seconds: number) => {
-    const mins = Math.floor(seconds / 60);
-    const secs = seconds % 60;
-    return `${mins}:${secs.toString().padStart(2, '0')}`;
-  };
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-slate-950 via-red-950/30 to-slate-900 flex">
@@ -61,7 +42,7 @@ export function StrategyRoom({ onComplete }: StrategyRoomProps) {
           </div>
         </div>
         <div className="text-right">
-          <div className="text-2xl font-bold">{formatTime(countdown)}</div>
+          <div className="text-2xl font-bold">{formattedTime}</div>
           <div className="text-sm text-red-100">작전 시간 남음</div>
         </div>
       </div>

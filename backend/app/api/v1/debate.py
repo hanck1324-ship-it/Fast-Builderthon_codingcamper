@@ -1,5 +1,6 @@
 """
 토론 API 라우터
+3자 토론 시스템 (User → James → Linda)
 """
 from fastapi import APIRouter, Depends, HTTPException, status
 from app.models.schemas import (
@@ -7,6 +8,8 @@ from app.models.schemas import (
     DebateStartResponse,
     DebateMessageRequest,
     DebateMessageResponse,
+    SingleDebateMessageRequest,
+    SingleDebateMessageResponse,
     ErrorResponse,
 )
 from app.core.dependencies import get_debate_engine
@@ -47,8 +50,12 @@ async def start_debate(
             james_position = "찬성 (Pro)"
             linda_position = "반대 (Con)"
         
-        # 토론 세션 초기화 (실제 구현 시 debate_engine 사용)
-        # await debate_engine.initialize_session(session_id, request.topic, request.user_position)
+        # 토론 세션 초기화
+        await debate_engine.initialize_session(
+            session_id=session_id,
+            topic=request.topic,
+            user_position=request.user_position,
+        )
         
         return DebateStartResponse(
             session_id=session_id,
@@ -72,43 +79,81 @@ async def start_debate(
         400: {"model": ErrorResponse, "description": "잘못된 요청"},
         500: {"model": ErrorResponse, "description": "서버 에러"},
     },
-    summary="토론 메시지 전송",
-    description="토론 세션에 메시지를 전송하고 AI 토론자의 응답을 받습니다.",
+    summary="3자 토론 메시지 전송",
+    description="토론 세션에 메시지를 전송하고 James와 Linda의 순차적 응답을 받습니다.",
 )
 async def send_message(
     request: DebateMessageRequest,
     debate_engine: DebateEngine = Depends(get_debate_engine),
 ):
     """
-    토론 메시지를 전송하고 AI 응답을 받습니다.
+    3자 토론 메시지를 전송하고 AI 응답을 받습니다.
+    
+    **토론 흐름**: User → James 응답 → Linda 응답 (순차적)
+    
+    **토큰 계산 로직**:
+    - 기본 발언: +10 토큰
+    - 50자 이상 논리적 발언: +20 토큰
+    - 질문 형태 발언: +15 토큰
+    
+    - **session_id**: 토론 세션 ID
+    - **user_message**: 사용자 메시지
+    - **lecture_context**: 강의 컨텍스트 (선택)
+    """
+    try:
+        # 3자 토론 처리: User → James → Linda
+        james_response, linda_response, tokens_earned = await debate_engine.process_message(
+            session_id=request.session_id,
+            user_message=request.user_message,
+            lecture_context=request.lecture_context or "",
+        )
+        
+        return DebateMessageResponse(
+            session_id=request.session_id,
+            james_response=james_response,
+            linda_response=linda_response,
+            tokens_earned=tokens_earned,
+            timestamp=datetime.utcnow(),
+        )
+    except Exception as e:
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail=str(e),
+        )
+
+
+@router.post(
+    "/message/single",
+    response_model=SingleDebateMessageResponse,
+    responses={
+        400: {"model": ErrorResponse, "description": "잘못된 요청"},
+        500: {"model": ErrorResponse, "description": "서버 에러"},
+    },
+    summary="단일 토론자 메시지 전송",
+    description="특정 AI 토론자(James 또는 Linda)에게만 메시지를 전송합니다.",
+)
+async def send_single_message(
+    request: SingleDebateMessageRequest,
+    debate_engine: DebateEngine = Depends(get_debate_engine),
+):
+    """
+    단일 토론자에게 메시지를 전송하고 응답을 받습니다.
     
     - **session_id**: 토론 세션 ID
     - **message**: 사용자 메시지
     - **target_debater**: 응답할 AI 토론자 (james/linda)
     """
     try:
-        # AI 토론자 응답 생성 (실제 구현 시 debate_engine 사용)
-        # response = await debate_engine.generate_response(
-        #     session_id=request.session_id,
-        #     user_message=request.message,
-        #     debater=request.target_debater,
-        # )
-        
-        # 스텁 응답
-        stub_responses = {
-            "james": "흥미로운 관점이네요. 하지만 저는 다른 시각에서 바라보고 싶습니다. 이 문제에 대해 더 깊이 생각해볼 필요가 있습니다.",
-            "linda": "그 의견에 동의하는 부분도 있지만, 다른 관점에서 보면 상황이 달라질 수 있습니다. 함께 더 논의해볼까요?",
-        }
-        
-        response_message = stub_responses.get(
-            request.target_debater.value,
-            "응답을 생성할 수 없습니다.",
+        response = await debate_engine.generate_response(
+            session_id=request.session_id,
+            user_message=request.message,
+            debater=request.target_debater,
         )
         
-        return DebateMessageResponse(
+        return SingleDebateMessageResponse(
             session_id=request.session_id,
             debater=request.target_debater,
-            message=response_message,
+            message=response,
             audio_url=None,  # TTS 연동 시 URL 제공
             timestamp=datetime.utcnow(),
         )
@@ -124,10 +169,24 @@ async def send_message(
     summary="토론 세션 조회",
     description="특정 토론 세션의 정보를 조회합니다.",
 )
-async def get_session(session_id: str):
-    """토론 세션 정보 조회 (스텁)"""
+async def get_session(
+    session_id: str,
+    debate_engine: DebateEngine = Depends(get_debate_engine),
+):
+    """토론 세션 정보 조회"""
+    session = debate_engine.get_session(session_id)
+    
+    if not session:
+        return {
+            "session_id": session_id,
+            "status": "not_found",
+            "message": "세션을 찾을 수 없습니다.",
+        }
+    
     return {
         "session_id": session_id,
         "status": "active",
-        "message": "세션 조회 기능은 추후 구현 예정입니다.",
+        "topic": session.get("topic", ""),
+        "total_tokens_earned": session.get("total_tokens_earned", 0),
+        "message_count": len(session.get("history", [])),
     }

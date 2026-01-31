@@ -4,7 +4,7 @@ import { Suspense } from 'react'
 import { useRouter, useSearchParams } from 'next/navigation'
 import { LectureListPage } from '@/components/LectureListPage'
 import { useApp } from '@/components/providers'
-import { Lecture } from '@/data/mockData'
+import type { Lecture } from '@/types'
 
 function LecturesContent() {
   const router = useRouter()

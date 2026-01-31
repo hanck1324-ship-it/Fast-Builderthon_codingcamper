@@ -48,7 +48,43 @@ class DebateStartResponse(BaseModel):
 
 
 class DebateMessageRequest(BaseModel):
-    """토론 메시지 요청"""
+    """토론 메시지 요청 (3자 토론용)"""
+    session_id: str = Field(..., description="세션 ID")
+    user_message: str = Field(..., description="사용자 메시지")
+    lecture_context: Optional[str] = Field(None, description="강의 컨텍스트")
+    
+    class Config:
+        json_schema_extra = {
+            "example": {
+                "session_id": "session_123",
+                "user_message": "AI의 발전은 인류에게 이로운 영향을 줍니다.",
+                "lecture_context": "AI 윤리와 사회적 영향에 대한 강의"
+            }
+        }
+
+
+class DebateMessageResponse(BaseModel):
+    """토론 메시지 응답 (3자 토론용 - James와 Linda 모두 응답)"""
+    session_id: str
+    james_response: str = Field(..., description="제임스(비판적 관점)의 응답")
+    linda_response: str = Field(..., description="린다(지지적 관점)의 응답")
+    tokens_earned: int = Field(default=0, description="획득한 토큰 수")
+    timestamp: datetime = Field(default_factory=datetime.utcnow)
+    
+    class Config:
+        json_schema_extra = {
+            "example": {
+                "session_id": "session_123",
+                "james_response": "흥미로운 관점이지만, AI 발전이 모두에게 이롭다는 주장에는 몇 가지 반례가 있습니다.",
+                "linda_response": "좋은 지적이에요! 😊 AI의 긍정적 영향에 초점을 맞춘 점이 훌륭해요.",
+                "tokens_earned": 20,
+                "timestamp": "2024-01-15T10:30:00Z"
+            }
+        }
+
+
+class SingleDebateMessageRequest(BaseModel):
+    """단일 토론자 메시지 요청 (기존 호환용)"""
     session_id: str = Field(..., description="세션 ID")
     message: str = Field(..., description="사용자 메시지")
     target_debater: DebaterRole = Field(
@@ -66,8 +102,8 @@ class DebateMessageRequest(BaseModel):
         }
 
 
-class DebateMessageResponse(BaseModel):
-    """토론 메시지 응답"""
+class SingleDebateMessageResponse(BaseModel):
+    """단일 토론자 메시지 응답 (기존 호환용)"""
     session_id: str
     debater: DebaterRole
     message: str

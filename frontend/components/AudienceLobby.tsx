@@ -3,13 +3,14 @@
 import { useState } from 'react';
 import { motion } from 'framer-motion';
 import { Headphones, Zap, Users, TrendingUp } from 'lucide-react';
+import type { TeamType } from '@/types';
 
 interface AudienceLobbyProps {
-  onSelectTeam: (team: 'yeoul' | 'challenger') => void;
+  onSelectTeam: (team: TeamType) => void;
 }
 
 export function AudienceLobby({ onSelectTeam }: AudienceLobbyProps) {
-  const [hoveredTeam, setHoveredTeam] = useState<'yeoul' | 'challenger' | null>(null);
+  const [hoveredTeam, setHoveredTeam] = useState<TeamType | null>(null);
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-slate-950 via-purple-950/30 to-slate-900 flex items-center justify-center p-8">
