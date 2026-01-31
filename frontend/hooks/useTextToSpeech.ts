@@ -56,9 +56,9 @@ export function useTextToSpeech(): UseTextToSpeechReturn {
   const abortControllerRef = useRef<AbortController | null>(null)
 
   /**
-   * 오디오 리소스 정리
+   * 오디오 리소스만 정리 (fetch 요청은 취소하지 않음)
    */
-  const cleanup = useCallback(() => {
+  const cleanupAudio = useCallback(() => {
     if (audioRef.current) {
       audioRef.current.pause()
       audioRef.current.src = ''
@@ -68,11 +68,18 @@ export function useTextToSpeech(): UseTextToSpeechReturn {
       URL.revokeObjectURL(audioUrlRef.current)
       audioUrlRef.current = null
     }
+  }, [])
+
+  /**
+   * 전체 리소스 정리 (fetch 요청도 취소)
+   */
+  const cleanup = useCallback(() => {
+    cleanupAudio()
     if (abortControllerRef.current) {
       abortControllerRef.current.abort()
       abortControllerRef.current = null
     }
-  }, [])
+  }, [cleanupAudio])
 
   /**
    * 재생 중지
@@ -144,24 +151,26 @@ export function useTextToSpeech(): UseTextToSpeechReturn {
         }
 
         audio.onended = () => {
+          // 오디오만 정리하고 abortController는 건드리지 않음
+          // 다음 메시지 재생 시 새 요청이 취소되는 것을 방지
+          cleanupAudio()
           setIsPlaying(false)
           setCurrentSpeaker(null)
-          cleanup()
           resolve()
         }
 
         audio.onerror = (e) => {
+          cleanupAudio()
           setIsPlaying(false)
           setCurrentSpeaker(null)
-          cleanup()
           reject(new Error('오디오 재생 중 오류가 발생했습니다.'))
         }
 
         audio.play().catch((err) => {
+          cleanupAudio()
           setIsPlaying(false)
           setCurrentSpeaker(null)
           setIsLoading(false)
-          cleanup()
           reject(err)
         })
       })
@@ -193,25 +202,35 @@ export function useTextToSpeech(): UseTextToSpeechReturn {
     lindaText: string,
     onComplete?: () => void
   ): Promise<void> => {
-    try {
-      setError(null)
-      
-      // James 응답 재생
-      if (jamesText.trim()) {
+    setError(null)
+    let hasError = false
+    
+    // James 응답 재생
+    if (jamesText.trim()) {
+      try {
         await speak(jamesText, 'james')
+      } catch (err) {
+        hasError = true
+        console.error('TTS James error:', err)
       }
-      
-      // Linda 응답 재생
-      if (lindaText.trim()) {
-        await speak(lindaText, 'linda')
-      }
-      
-      // 완료 콜백 실행
-      onComplete?.()
-    } catch (err) {
-      // 에러는 speak 함수에서 이미 처리됨
-      console.error('Sequential speak error:', err)
     }
+    
+    // Linda 응답 재생 (James 실패 시에도 시도)
+    if (lindaText.trim()) {
+      try {
+        await speak(lindaText, 'linda')
+      } catch (err) {
+        hasError = true
+        console.error('TTS Linda error:', err)
+      }
+    }
+    
+    // 완료 콜백 실행 (실패 여부와 무관하게 호출)
+    if (!hasError) {
+      onComplete?.()
+      return
+    }
+    onComplete?.()
   }, [speak])
 
   return {

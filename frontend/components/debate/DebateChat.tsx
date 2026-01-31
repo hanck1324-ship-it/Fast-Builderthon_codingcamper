@@ -48,14 +48,20 @@ export default function DebateChat({ messages, isLoading, autoPlayVoice = true }
   }
 
   // 새 AI 메시지가 추가되면 자동으로 음성 재생
+  // isPlaying이 false가 될 때도 다음 메시지를 재생하기 위해 의존성에 포함
   useEffect(() => {
-    if (!autoPlayVoice || isLoading || isPlaying) return
+    if (!autoPlayVoice || isLoading) return
+    
+    // 이미 재생 중이면 건너뜀
+    if (isPlaying) return
 
     const aiMessages = messages.filter(m => m.speaker === 'james' || m.speaker === 'linda')
-    if (aiMessages.length > lastPlayedIndexRef.current + 1) {
-      const nextMessage = aiMessages[lastPlayedIndexRef.current + 1]
+    const nextIndex = lastPlayedIndexRef.current + 1
+    
+    if (nextIndex < aiMessages.length) {
+      const nextMessage = aiMessages[nextIndex]
       if (nextMessage && (nextMessage.speaker === 'james' || nextMessage.speaker === 'linda')) {
-        lastPlayedIndexRef.current++
+        lastPlayedIndexRef.current = nextIndex
         speak(nextMessage.content, nextMessage.speaker).catch(console.error)
       }
     }

@@ -2,6 +2,7 @@
 음성 API 라우터 (ElevenLabs TTS)
 """
 from fastapi import APIRouter, Depends, HTTPException, status, Response
+import logging
 from fastapi.responses import StreamingResponse
 from app.models.schemas import (
     VoiceSynthesizeRequest,
@@ -13,6 +14,7 @@ from app.core.dependencies import get_voice_service
 from app.services.voice_service import VoiceService
 
 router = APIRouter()
+logger = logging.getLogger(__name__)
 
 
 @router.post(
@@ -39,9 +41,19 @@ async def synthesize_voice(
         audio/mpeg 형식의 오디오 데이터
     """
     try:
+        logger.info(
+            "TTS synthesize request voice=%s text_len=%s",
+            request.voice.value,
+            len(request.text),
+        )
         audio_bytes = await voice_service.synthesize(
             text=request.text,
             voice=request.voice,
+        )
+        logger.info(
+            "TTS synthesize response voice=%s bytes=%s",
+            request.voice.value,
+            len(audio_bytes),
         )
         
         return Response(
