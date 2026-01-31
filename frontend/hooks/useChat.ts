@@ -34,7 +34,12 @@ export function useChat({ lecture, onEarnTokens }: UseChatOptions) {
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const sessionIdRef = useRef<string | null>(null);
   const nextIdRef = useRef(initialMessages.length + 1);
-  const { speakSequential } = useTextToSpeech();
+  const {
+    speakSequential,
+    isPlaying: isTtsPlaying,
+    currentSpeaker,
+    isLoading: isTtsLoading,
+  } = useTextToSpeech();
 
   useEffect(() => {
     messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
@@ -140,6 +145,9 @@ export function useChat({ lecture, onEarnTokens }: UseChatOptions) {
     setInputText,
     isRecording,
     isAISpeaking,
+    isTtsPlaying,
+    isTtsLoading,
+    currentSpeaker,
     messagesEndRef,
     handleSendMessage,
     toggleRecording,

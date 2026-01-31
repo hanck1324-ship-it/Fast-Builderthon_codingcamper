@@ -5,6 +5,7 @@ import { ChatSidebar } from './chat/ChatSidebar';
 import { ChatHeader } from './chat/ChatHeader';
 import { ChatMessages } from './chat/ChatMessages';
 import { ChatInput } from './chat/ChatInput';
+import { AudioVisualizer } from './AudioVisualizer';
 import type { Lecture, SenderConfig } from '@/types';
 
 interface MainChatUIProps {
@@ -27,6 +28,9 @@ export function MainChatUI({ lecture, tokens, onEarnTokens, onBack }: MainChatUI
     setInputText,
     isRecording,
     isAISpeaking,
+    isTtsPlaying,
+    isTtsLoading,
+    currentSpeaker,
     messagesEndRef,
     handleSendMessage,
     toggleRecording,
@@ -38,6 +42,11 @@ export function MainChatUI({ lecture, tokens, onEarnTokens, onBack }: MainChatUI
 
       <main className="flex-1 flex flex-col">
         <ChatHeader />
+
+        <AudioVisualizer
+          isActive={isTtsPlaying || isTtsLoading}
+          speaker={currentSpeaker}
+        />
 
         <ChatMessages
           messages={messages}
