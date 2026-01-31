@@ -198,7 +198,13 @@ export function ChatInput({
             type="text"
             value={displayText}
             onChange={(e) => onInputChange(e.target.value)}
-            onKeyDown={(e) => e.key === 'Enter' && onSendMessage()}
+            onKeyDown={(e) => {
+              if (e.key !== 'Enter' || e.isComposing || e.nativeEvent.isComposing) {
+                return;
+              }
+              e.preventDefault();
+              onSendMessage();
+            }}
             placeholder={
               isListening
                 ? '듣고 있습니다... 말씀해주세요'
