@@ -1,9 +1,10 @@
 'use client'
 
-import { useRef } from 'react';
+import { useRef, useCallback } from 'react';
 import { motion } from 'framer-motion';
 import { Flame, Heart, ThumbsUp, Zap, MessageCircle, Send, ChevronLeft, ChevronRight } from 'lucide-react';
 import type { ChatMessage } from '@/types';
+import { VoiceRecorder } from '@/components/debate';
 
 interface LiveChatPanelProps {
   chatMessages: ChatMessage[];
@@ -31,6 +32,21 @@ export function LiveChatPanel({
   onToggleCollapse,
 }: LiveChatPanelProps) {
   const chatEndRef = useRef<HTMLDivElement>(null);
+  const handleTranscriptComplete = useCallback((transcript: string) => {
+    const trimmed = transcript.trim();
+    if (!trimmed) return;
+    onChatInputChange(trimmed);
+    if (sendDisabled) return;
+    setTimeout(() => {
+      onSendChat();
+    }, 100);
+  }, [onChatInputChange, onSendChat, sendDisabled]);
+
+  const handleInterimTranscript = useCallback((interim: string) => {
+    if (!chatInput) {
+      onChatInputChange(interim);
+    }
+  }, [chatInput, onChatInputChange]);
   
   return (
     <div
@@ -106,7 +122,15 @@ export function LiveChatPanel({
           isCollapsed ? 'opacity-0 pointer-events-none' : 'opacity-100'
         }`}
       >
-        <div className="flex gap-2">
+        <div className="flex gap-2 items-center">
+          <VoiceRecorder
+            mode="stt"
+            compact
+            useLongPress
+            isDisabled={sendDisabled}
+            onTranscriptComplete={handleTranscriptComplete}
+            onInterimTranscript={handleInterimTranscript}
+          />
           <input
             type="text"
             value={chatInput}

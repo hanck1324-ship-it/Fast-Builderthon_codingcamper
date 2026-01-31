@@ -46,52 +46,17 @@ export function ChatInput({
     }
   }, [transcript, onInputChange]);
 
-  // 녹음 토글 핸들러
-  const handleToggleRecording = useCallback(() => {
+  const handlePointerDown = useCallback(() => {
     if (!isSttSupported) {
-      // STT 미지원 시 기존 토글 동작
       onToggleRecording();
       return;
     }
-
-    if (isListening) {
-      stopListening();
-      // 음성 인식 종료 후 텍스트가 있으면 자동 전송
-      if (transcript || interimTranscript) {
-        const finalText = transcript || interimTranscript;
-        onInputChange(finalText);
-        setTimeout(() => {
-          onSendMessage();
-          resetTranscript();
-        }, 100);
-      }
-    } else {
-      resetTranscript();
-      onInputChange('');
-      startListening();
-    }
-  }, [
-    isSttSupported,
-    isListening,
-    transcript,
-    interimTranscript,
-    stopListening,
-    startListening,
-    resetTranscript,
-    onInputChange,
-    onSendMessage,
-    onToggleRecording,
-  ]);
-
-  // Long press 핸들러
-  const handleMouseDown = useCallback(() => {
-    if (!isSttSupported) return;
     resetTranscript();
     onInputChange('');
     startListening();
-  }, [isSttSupported, resetTranscript, onInputChange, startListening]);
+  }, [isSttSupported, resetTranscript, onInputChange, startListening, onToggleRecording]);
 
-  const handleMouseUp = useCallback(() => {
+  const handlePointerUp = useCallback(() => {
     if (!isSttSupported || !isListening) return;
     stopListening();
     // 텍스트가 있으면 자동 전송
@@ -174,12 +139,9 @@ export function ChatInput({
           <motion.button
             whileHover={{ scale: 1.05 }}
             whileTap={{ scale: 0.95 }}
-            onClick={handleToggleRecording}
-            onMouseDown={handleMouseDown}
-            onMouseUp={handleMouseUp}
-            onMouseLeave={handleMouseUp}
-            onTouchStart={handleMouseDown}
-            onTouchEnd={handleMouseUp}
+            onPointerDown={handlePointerDown}
+            onPointerUp={handlePointerUp}
+            onPointerLeave={handlePointerUp}
             className={`p-4 rounded-xl transition-all select-none touch-none ${
               isActiveRecording
                 ? 'bg-red-600 hover:bg-red-500 glow-red'
